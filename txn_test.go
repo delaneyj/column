@@ -687,13 +687,13 @@ func TestUpsertKey(t *testing.T) {
 	c := NewCollection()
 	c.CreateColumn("key", ForKey())
 	c.CreateColumn("val", ForString())
-	assert.NoError(t, c.UpsertKey("1", func(r Row) error {
+	assert.NoError(t, c.UpsertKey(1, func(r Row) error {
 		r.SetString("val", "Roman")
 		return nil
 	}))
 
 	count := 0
-	assert.NoError(t, c.UpsertKey("1", func(r Row) error {
+	assert.NoError(t, c.UpsertKey(1, func(r Row) error {
 		count++
 		return nil
 	}))
@@ -706,7 +706,7 @@ func TestUpsertKeyNoColumn(t *testing.T) {
 	c.CreateColumn("key", ForKey())
 
 	assert.Panics(t, func() {
-		c.UpsertKey("1", func(r Row) error {
+		c.UpsertKey(1, func(r Row) error {
 			r.Enum("xxx")
 			return nil
 		})
@@ -717,14 +717,14 @@ func TestDeleteKey(t *testing.T) {
 	c := NewCollection()
 	c.CreateColumn("key", ForKey())
 	c.CreateColumn("val", ForString())
-	assert.NoError(t, c.InsertKey("1", func(r Row) error {
+	assert.NoError(t, c.InsertKey(1, func(r Row) error {
 		r.SetString("val", "Roman")
 		return nil
 	}))
 
 	// Only one should succeed
-	assert.NoError(t, c.DeleteKey("1"))
-	assert.Error(t, c.DeleteKey("1"))
+	assert.NoError(t, c.DeleteKey(1))
+	assert.Error(t, c.DeleteKey(1))
 	assert.Equal(t, 0, c.Count())
 }
 
@@ -733,10 +733,10 @@ func TestInsertKey(t *testing.T) {
 	c.CreateColumn("key", ForKey())
 
 	// Only one should succeed
-	assert.NoError(t, c.InsertKey("1", func(r Row) error {
+	assert.NoError(t, c.InsertKey(1, func(r Row) error {
 		return nil
 	}))
-	assert.Error(t, c.InsertKey("1", func(r Row) error {
+	assert.Error(t, c.InsertKey(1, func(r Row) error {
 		return nil
 	}))
 	assert.Equal(t, 1, c.Count())
@@ -747,16 +747,16 @@ func TestQueryKey(t *testing.T) {
 	c.CreateColumn("key", ForKey())
 	c.CreateColumn("val", ForString())
 
-	assert.Error(t, c.QueryKey("1", func(r Row) error {
+	assert.Error(t, c.QueryKey(1, func(r Row) error {
 		return nil
 	}))
 
-	assert.NoError(t, c.InsertKey("1", func(r Row) error {
+	assert.NoError(t, c.InsertKey(1, func(r Row) error {
 		r.SetString("val", "Roman")
 		return nil
 	}))
 
-	assert.NoError(t, c.QueryKey("1", func(r Row) error {
+	assert.NoError(t, c.QueryKey(1, func(r Row) error {
 		return nil
 	}))
 }
@@ -766,14 +766,14 @@ func TestChangeKey(t *testing.T) {
 	c.CreateColumn("key", ForKey())
 
 	// Try to change the key from "1" to "2"
-	assert.NoError(t, c.InsertKey("1", func(r Row) error { return nil }))
-	assert.NoError(t, c.QueryKey("1", func(r Row) error {
-		r.SetKey("2")
+	assert.NoError(t, c.InsertKey(1, func(r Row) error { return nil }))
+	assert.NoError(t, c.QueryKey(1, func(r Row) error {
+		r.SetKey(2)
 		return nil
 	}))
 
 	// Must now have "2"
-	assert.NoError(t, c.QueryKey("2", func(r Row) error { return nil }))
+	assert.NoError(t, c.QueryKey(2, func(r Row) error { return nil }))
 	assert.Equal(t, 1, c.Count())
 }
 
@@ -832,7 +832,8 @@ func TestRowMethods(t *testing.T) {
 	c.CreateColumn("float32", ForFloat32())
 	c.CreateColumn("float64", ForFloat64())
 
-	c.InsertKey("key", func(r Row) error {
+	key := int64(1)
+	c.InsertKey(key, func(r Row) error {
 		r.SetBool("bool", true)
 		r.SetAny("name", "Roman")
 
@@ -867,7 +868,7 @@ func TestRowMethods(t *testing.T) {
 		assert.True(t, ok)
 	}
 
-	c.QueryKey("key", func(r Row) error {
+	c.QueryKey(key, func(r Row) error {
 		assert.True(t, r.Bool("bool"))
 		exists(r.Key())
 		exists(r.Any("name"))
@@ -892,8 +893,10 @@ func TestRow(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
+	const Roman = 1234
+
 	go c.Query(func(txn *Txn) error {
-		txn.InsertKey("Roman", func(r Row) error {
+		txn.InsertKey(Roman, func(r Row) error {
 			return nil
 		})
 		wg.Done()
